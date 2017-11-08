@@ -164,8 +164,8 @@ class DSN(object):
 	
 	if self.mode=='train_semantic_extractor':
 	
-	    self.images = tf.placeholder(tf.float32, [None, 224 * self.scale,224 * self.scale, 3], 'images')
-	    self.annotations = tf.placeholder(tf.float32, [None, 224 * self.scale,224 * self.scale, 1], 'annotations')
+	    self.images = tf.placeholder(tf.float32, [None, 736, 1280, 3], 'images')
+	    self.annotations = tf.placeholder(tf.float32, [None, 736, 1280, 1], 'annotations')
 	    self.is_training = tf.placeholder(tf.bool)
 
 	    labels_tensors = [tf.to_float(tf.equal(self.annotations, i)) for i in range(self.no_classes)]
