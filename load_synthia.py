@@ -32,18 +32,18 @@ def load_synthia(seq_name, no_elements=1000):
 
     scale = 1
 
-    images = np.zeros((len(img_files), 224 * scale, 224 * scale, 3))
-    gt_labels = np.zeros((len(gt_labels_files), 224 * scale, 224 * scale))
+    images = np.zeros((len(img_files), 1280, 736, 3))
+    gt_labels = np.zeros((len(gt_labels_files), 1280, 736))
 
     for n, img, gt_lab in zip(range(len(img_files)), img_files, gt_labels_files):
 	
 	#~ print n
 	
 	img = misc.imread(img)
-	img =  cv2.resize(img, (224 * scale, 224 * scale))
+	img =  cv2.resize(img, (1280, 736))
 	
 	gt_lab = np.asarray(imageio.imread(gt_lab, format='PNG-FI'))[:,:,0]  # uint16
-	gt_lab = cv2.resize(gt_lab, (224 * scale, 224 * scale), interpolation = cv2.INTER_NEAREST)
+	gt_lab = cv2.resize(gt_lab, (1280, 736), interpolation = cv2.INTER_NEAREST)
 	
 	
 	images[n] = img
