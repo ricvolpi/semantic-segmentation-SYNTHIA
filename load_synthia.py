@@ -11,21 +11,17 @@ import imageio
 import os
 import glob
 
-def load_synthia(seq_name, no_elements=1000):
+def load_synthia(data_dir, no_elements=1000):
     
-    print 'Loading ' + seq_name
-
-    data_dir = './data'
-    seq_num = '01'  
-    mode = 'DAWN'
+    print 'Loading ' + data_dir
 
     #~ img_dir = os.path.join(data_dir,'SYNTHIA-SEQS-'+seq_num+'-'+mode,'RGB/Stereo_Left/Omni_F')
 
     #~ img_dir = './data/SYNTHIA/Omni_F_RGB'
     #~ gt_labels_dir = './data/SYNTHIA/Omni_F_GT_LABELS'
     
-    img_dir = '/cvgl/group/Synthia/'+seq_name+'/RGB/Stereo_Left/Omni_F'
-    gt_labels_dir = '/cvgl/group/Synthia/'+seq_name+'/GT/LABELS/Stereo_Left/Omni_F' 
+    img_dir = data_dir+'/RGB/Stereo_Left/Omni_F'
+    gt_labels_dir = data_dir+'/GT/LABELS/Stereo_Left/Omni_F' 
 
     img_files = sorted(glob.glob(img_dir+'/*'))[:10]
     gt_labels_files = sorted(glob.glob(gt_labels_dir+'/*'))[:10]
@@ -63,7 +59,7 @@ def load_synthia(seq_name, no_elements=1000):
 
 if __name__=='__main__':
     
-    images, gt_labels = load_synthia(seq_name='SYNTHIA-SEQS-01-DAWN',no_elements=100)
+    images, gt_labels = load_synthia(data_dir = '/cvgl/group/Synthia/SYNTHIA-SEQS-01-DAWN')
     print 'break'
 
 

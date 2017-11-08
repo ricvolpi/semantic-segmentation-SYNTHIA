@@ -7,6 +7,8 @@ from matplotlib import pyplot as plt
 
 import cPickle
 
+from ConfigParser import *
+
 import urllib2
 
 slim = tf.contrib.slim
@@ -20,17 +22,33 @@ import utils
 
 class DSN(object):
     
-    def __init__(self, seq_name, fc7_size, exp_folder, exp_subfolder, no_classes=14):
+    def __init__(self, exp_dir):
+	
+	self.exp_dir = exp_dir
+	self.load_exp_config()
+	
+    def load_exp_config(self):
 	
 	
-	self.exp_dir = os.path.join(exp_folder, seq_name, exp_subfolder)
-	self.fc7_size = fc7_size
+	config = ConfigParser()
+        config.read(self.exp_dir + '/exp_configuration')
+        
+	self.vgg_checkpoint_path = config.get('EXPERIMENT_SETTINGS', 'vgg_checkpoint_path')
+	#~ self.vgg_checkpoint_path = './vgg_16.ckpt'
+	self.synthia_dataset_path = config.get('EXPERIMENT_SETTINGS', 'synthia_dataset_path')
+	self.synthia_seqs_type = config.get('EXPERIMENT_SETTINGS', 'synthia_seqs_type')
+	self.synthia_seqs_number = config.get('EXPERIMENT_SETTINGS', 'synthia_seqs_number')
 	
-	self.seq_name = seq_name
-	self.no_classes = no_classes
+	self.data_dir = self.synthia_dataset_path + '/SYNTHIA-SEQS-' + self.synthia_seqs_number + '-' + self.synthia_seqs_type
+
 	self.log_dir = os.path.join(self.exp_dir,'logs')
-	self.vgg_checkpoint_path = './vgg_16.ckpt'
-	self.scale = 1
+		
+	self.training_epochs = config.getint('MAIN_SETTINGS', 'training_epochs')
+	self.batch_size = config.getint('MAIN_SETTINGS', 'batch_size')
+	self.learning_rate = config.getfloat('MAIN_SETTINGS', 'learning_rate')
+	
+	self.fc7_size = config.getint('MODEL_SETTINGS', 'fc7_size')
+	self.no_classes = config.getint('MODEL_SETTINGS', 'no_classes')
 	
     def vgg_encoding(self, processed_images, is_training, reuse=False): 
 		
@@ -185,7 +203,7 @@ class DSN(object):
 	    self.vgg_output_flat = tf.squeeze(self.vgg_output)
 	    
 	    vgg_fc8_weights = slim.get_variables_to_restore(include=['vgg_16/fc8'])
-	    vgg_except_fc8_weights = slim.get_variables_to_restore(exclude= ['vgg_16/fc7','vgg_16/fc8'])
+	    vgg_except_fc8_weights = slim.get_variables_to_restore(exclude= ['vgg_16/fc8'])
 	    
 	    # extracting semantic representation
 	    
@@ -211,11 +229,11 @@ class DSN(object):
 
 	    # Optimizers
 
-	    optimizer = tf.train.AdamOptimizer(learning_rate=0.000001)
+	    optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
 
 	    # no re-training of VGG-16 variables
 	    
-	    print '\n\n\n\n\n\nWARNING - TRAINNIG ALL VGG-16 PARAMETERS\n\n\n\n\n\n'
+	    print '\n\n\n\n\n\nWARNING - TRAINING ALL VGG-16 PARAMETERS\n\n\n\n\n\n'
 
 	    t_vars = tf.trainable_variables()
 	    self.train_vars = t_vars#[var for var in t_vars if ('vgg_16' not in var.name) or ('fc6' in var.name) or ('fc7' in var.name) or ('fc8' in var.name)]
@@ -287,14 +305,14 @@ class DSN(object):
 	     
 	    saver = tf.train.Saver(self.train_vars)
 	    
-	    images, annotations = load_synthia(self.seq_name, no_elements=900)
+	    images, annotations = load_synthia(self.data_dir)
 	    
 	    feed_dict = {self.images: images,
 			 self.annotations: annotations,
 			 self.is_training: False}
 
-	    EPOCHS = 1000000
-	    BATCH_SIZE = 1
+	    EPOCHS = self.training_epochs
+	    BATCH_SIZE = self.batch_size
 	    
 	    
 	    
@@ -374,13 +392,13 @@ class DSN(object):
 	config = tf.ConfigProto(device_count = {'GPU': 0})
 
 
-	source_images, source_annotations = load_synthia(self.seq_name, no_elements=10)
+	source_images, source_annotations = load_synthia(self.data_dir)
 	source_features = np.zeros((len(source_images),self.fc7_size))
 	source_losses = np.zeros((len(source_images), 1))
 	source_preds = np.zeros((len(source_images),224,224))
 	source_mIoU = np.zeros((len(source_images),))
 	
-	target_images, target_annotations = load_synthia(seq_2_name, no_elements=10)
+	target_images, target_annotations = load_synthia(self.data_dir)
 	target_features = np.zeros((len(target_images),self.fc7_size))
 	target_preds = np.zeros((len(target_images),224,224))
 	target_losses = np.zeros((len(target_images), 1))
@@ -496,7 +514,7 @@ class DSN(object):
 		    
     def features_to_pkl(self, seq_2_names = ['...'], train_stage='dsn'):
 	
-	source_images, _ = load_synthia(self.seq_name, no_elements=900)
+	source_images, _ = load_synthia(self.data_dir)
 		
 	source_features = self.extract_VGG16_features(source_images, train_stage=train_stage)
 	tf.reset_default_graph()
@@ -504,7 +522,7 @@ class DSN(object):
 	target_features = dict()
 	
 	for s in seq_2_names:
-	    target_images, _ = load_synthia(s, no_elements=900)
+	    target_images, _ = load_synthia(self.data_dir)
 	    target_features[s] = self.extract_VGG16_features(target_images, train_stage=train_stage)
 	    tf.reset_default_graph()
 	
@@ -540,7 +558,7 @@ class DSN(object):
 	config = tf.ConfigProto(device_count = {'GPU': 0})
 
 
-	source_images, source_annotations = load_synthia('SYNTHIA-SEQS-01-NIGHT', no_elements=900)
+	source_images, source_annotations = load_synthia(self.data_dir)
 		     
 	source_features = np.zeros((len(source_images),self.fc7_size))
 	source_losses = np.zeros((len(source_images), 1))
@@ -599,15 +617,11 @@ if __name__ == "__main__":
     
     GPU_ID = sys.argv[1]
     MODE = 'train_semantic_extractor'
-    SEQ_NAME = 'SYNTHIA-SEQS-01-NIGHT'
-    FC7_SIZE = int(sys.argv[2])
-    EXP_FOLDER = '/cvgl2/u/rvolpi/experiments/'
-    EXP_SUBFOLDER = str(sys.argv[2])
 
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152 on stackoverflow
     os.environ["CUDA_VISIBLE_DEVICES"] = str(GPU_ID)
     
-    model = DSN(seq_name=SEQ_NAME, fc7_size=FC7_SIZE, exp_folder = EXP_FOLDER, exp_subfolder = EXP_SUBFOLDER)
+    model = DSN(exp_dir = '/cvgl2/u/rvolpi/experiments/SYNTHIA-SEQS-01-DAWN/dummy')
 	    
     if MODE == 'train_semantic_extractor':    
 	print 'Training Semantic Extractor.'
